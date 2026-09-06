@@ -82,7 +82,6 @@ function checkAccess(request) {
     'ottplayer', 'ott player', 'potplayer', 'mpc-hc', 'mpc-be',
     'kmplayer', 'gomplayer', 'mediaplayer', 'libmpv', 'player',
     'ns player', 'nsplayer', 'ns-player',
-    'mytv', 'my tv', 'my-tv', 'messi tv', 'messitv', 'messi-tv',
   ];
 
   const smartTVs = [
@@ -114,15 +113,6 @@ function checkAccess(request) {
 
   const isBrowser = accept.includes('text/html') || sfd === 'document' || sfm === 'navigate';
   if (isBrowser) return { allowed: false, isBrowser: true, reason: 'Browser blocked' };
-
-  // TEMP DEBUG: raw UA hamesha log karo jab bhi request block ho — chahe
-  // "Browser blocked" ho ya "Unknown app" ho. LG TV pe MyTv/Kodi/SS IPTV/
-  // Messi TV jaisi apps fail ho rahi hain — is log se exact UA string
-  // milega (wrangler pages deployment tail / Cloudflare dashboard Logs
-  // tab se dekho), phir usko upar iptvApps/smartTVs mein add karke
-  // permanent fix karenge.
-  console.log(`[UNRECOGNIZED UA] "${request.headers.get('user-agent') || ''}"`);
-
   return { allowed: false, reason: 'Unknown app' };
 }
 
@@ -439,25 +429,8 @@ export async function onRequest(context) {
   const accessResult = checkAccess(request);
 
   if (!accessResult.allowed && action !== 'stream') {
-    const rawUA = request.headers.get('user-agent') || '(no user-agent sent)';
-    console.log('[BLOCKED]', accessResult.reason, '| UA:', rawUA);
-
-    // TEMP DEBUG MODE — instead of redirecting to Telegram, show the raw
-    // user-agent string as fake channel entries so it's visible directly
-    // inside the IPTV app's channel list (no need to dig through Cloudflare
-    // dashboard logs on a phone). REVERT this back to
-    //   return Response.redirect(TELEGRAM_URL, 302);
-    // once the real UA has been captured and added to iptvApps/smartTVs above.
-    const debugM3U = `#EXTM3U
-#EXTINF:-1 tvg-logo="${DEFAULT_LOGO}" group-title="🔍 DEBUG",>>> YOUR APP USER-AGENT BELOW <<<
-${TELEGRAM_URL}
-#EXTINF:-1 tvg-logo="${DEFAULT_LOGO}" group-title="🔍 DEBUG",${rawUA}
-${TELEGRAM_URL}
-`;
-    return new Response(debugM3U, {
-      status: 200,
-      headers: { ...commonHeaders, 'Content-Type': 'application/x-mpegurl; charset=utf-8' },
-    });
+    console.log('[BLOCKED]', accessResult.reason);
+    return Response.redirect(TELEGRAM_URL, 302);
   }
 
   if (action === 'stream' && isBrowserNavigation(request)) {
