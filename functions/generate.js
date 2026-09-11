@@ -13,6 +13,10 @@ export async function onRequest(context) {
 <meta name="robots" content="noindex, nofollow">
 <title>RKDYIPTV — Get Playlist</title>
 <script src='//libtl.com/sdk.js' data-zone='11341413' data-sdk='show_11341413'></script>
+<script src='//libtl.com/sdk.js' data-zone='11771716' data-sdk='show_11771716'></script>
+<script src='//libtl.com/sdk.js' data-zone='11771705' data-sdk='show_11771705'></script>
+<script src='//libtl.com/sdk.js' data-zone='11771730' data-sdk='show_11771730'></script>
+<script src='//libtl.com/sdk.js' data-zone='11771737' data-sdk='show_11771737'></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body {
@@ -182,6 +186,17 @@ export async function onRequest(context) {
 <script>
 const REQUIRED_ADS = 5;
 const MIN_AD_WATCH_MS = 10000; // 10 seconds — enforced silently in the background
+const AD_ZONES = ['11341413', '11771716', '11771705', '11771730', '11771737'];
+
+function showAdByIndex(index) {
+  const zoneId = AD_ZONES[index];
+  const fn = window['show_' + zoneId];
+  if (typeof fn !== 'function') {
+    return Promise.reject(new Error('Ad slot not ready, try again'));
+  }
+  return fn();
+}
+
 let sessionId = null;
 let watchedCount = 0;
 let generatedUrl = '';
@@ -306,7 +321,7 @@ async function watchAd() {
   const adStartTime = Date.now();
 
   try {
-    await show_11341413();
+    await showAdByIndex(watchedCount);
 
     const watchedMs = Date.now() - adStartTime;
     if (watchedMs < MIN_AD_WATCH_MS) {
