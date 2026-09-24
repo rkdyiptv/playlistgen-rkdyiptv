@@ -131,13 +131,6 @@ export async function onRequest(context) {
     }
 
     const sessionData = JSON.parse(rawSession);
-    if (!Array.isArray(sessionData.adZones) || sessionData.adZones.length !== REQUIRED_ADS) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid ad session. Please reload the page and watch the ads again.',
-      }), { status: 400, headers: commonHeaders });
-    }
-
     if ((sessionData.count || 0) < REQUIRED_ADS) {
       return new Response(JSON.stringify({
         success: false,
@@ -184,6 +177,9 @@ export async function onRequest(context) {
 
     // ── Cleanup + counters (still KV — transient, TTL-based) ──
     await env.TOKENS.delete(`adsession:${sessionId}`);
+    const generationRaw = await env.TOKENS.get(`adgeneration:${ip}`);
+    const generationCount = generationRaw ? parseInt(generationRaw, 10) || 0 : 0;
+    await env.TOKENS.put(`adgeneration:${ip}`, String(generationCount + 1), { expirationTtl: 172800 });
     await env.TOKENS.put(rlKey, String(rlCount + 1), { expirationTtl: 86400 });
     await env.TOKENS.put(cooldownKey, String(now + COOLDOWN_MS), {
       expirationTtl: COOLDOWN_TTL_SECONDS,
