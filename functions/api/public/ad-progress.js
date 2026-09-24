@@ -6,15 +6,8 @@
 // ============================================================
 
 const REQUIRED_ADS = 5;
-const SESSION_TTL = 480; // 8 min window to finish watching ads
-
-// 3 ad sets × 5 zones. The set is selected from the user's successful
-// generation count, so repeated generations use different zone IDs.
-const AD_ZONE_SETS = [
-  ['11341413', '11771716', '11771705', '11771730', '11771737'],
-  ['11880810', '11880813', '11880817', '11880825', '11880830'],
-  ['11880834', '11880839', '11880842', '11880847', '11880854'],
-];
+const SESSION_TTL = 480; // 15 min window to finish watching ads
+const AD_SET_COUNT = 3;
 
 function generateSessionId() {
   const bytes = new Uint8Array(16);
@@ -51,32 +44,15 @@ export async function onRequest(context) {
       }
     }
 
-    // The public-token rate-limit counter represents successful generations.
-    // 0 => set 1, 1 => set 2, 2 => set 3, 3 => set 1, etc.
-    const generationRaw = await env.TOKENS.get(`ratelimit:public-token:${ip}`);
-    const generationCount = generationRaw ? parseInt(generationRaw, 10) || 0 : 0;
-    const adSetIndex = generationCount % AD_ZONE_SETS.length;
-    const adZones = AD_ZONE_SETS[adSetIndex];
-
     const sessionId = generateSessionId();
-    const sessionData = {
-      count: 0,
-      createdAt: Date.now(),
-      ip,
-      generationCount,
-      adSetIndex,
-      adZones,
-    };
+    const generationRaw = await env.TOKENS.get(`adgeneration:${ip}`);
+    const generationCount = generationRaw ? parseInt(generationRaw, 10) || 0 : 0;
+    const adSet = generationCount % AD_SET_COUNT;
+    const sessionData = { count: 0, createdAt: Date.now(), ip, adSet, generationCount };
     await env.TOKENS.put(`adsession:${sessionId}`, JSON.stringify(sessionData), {
       expirationTtl: SESSION_TTL,
     });
-    return new Response(JSON.stringify({
-      success: true,
-      sessionId,
-      required: REQUIRED_ADS,
-      adSetIndex,
-      adZones,
-    }), {
+    return new Response(JSON.stringify({ success: true, sessionId, required: REQUIRED_ADS, adSet }), {
       status: 200, headers: commonHeaders,
     });
   }
