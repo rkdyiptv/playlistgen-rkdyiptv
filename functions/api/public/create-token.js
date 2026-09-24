@@ -131,6 +131,13 @@ export async function onRequest(context) {
     }
 
     const sessionData = JSON.parse(rawSession);
+    if (!Array.isArray(sessionData.adZones) || sessionData.adZones.length !== REQUIRED_ADS) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Invalid ad session. Please reload the page and watch the ads again.',
+      }), { status: 400, headers: commonHeaders });
+    }
+
     if ((sessionData.count || 0) < REQUIRED_ADS) {
       return new Response(JSON.stringify({
         success: false,
