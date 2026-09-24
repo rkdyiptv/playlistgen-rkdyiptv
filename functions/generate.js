@@ -12,11 +12,22 @@ export async function onRequest(context) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>RKDYIPTV — Get Playlist</title>
+<!-- All 15 Monetag SDKs are loaded in the header. The server still selects only 5 zones per generation. -->
 <script src='//libtl.com/sdk.js' data-zone='11341413' data-sdk='show_11341413'></script>
 <script src='//libtl.com/sdk.js' data-zone='11771716' data-sdk='show_11771716'></script>
 <script src='//libtl.com/sdk.js' data-zone='11771705' data-sdk='show_11771705'></script>
 <script src='//libtl.com/sdk.js' data-zone='11771730' data-sdk='show_11771730'></script>
 <script src='//libtl.com/sdk.js' data-zone='11771737' data-sdk='show_11771737'></script>
+<script src='//libtl.com/sdk.js' data-zone='11880810' data-sdk='show_11880810'></script>
+<script src='//libtl.com/sdk.js' data-zone='11880813' data-sdk='show_11880813'></script>
+<script src='//libtl.com/sdk.js' data-zone='11880817' data-sdk='show_11880817'></script>
+<script src='//libtl.com/sdk.js' data-zone='11880825' data-sdk='show_11880825'></script>
+<script src='//libtl.com/sdk.js' data-zone='11880830' data-sdk='show_11880830'></script>
+<script src='//libtl.com/sdk.js' data-zone='11880834' data-sdk='show_11880834'></script>
+<script src='//libtl.com/sdk.js' data-zone='11880839' data-sdk='show_11880839'></script>
+<script src='//libtl.com/sdk.js' data-zone='11880842' data-sdk='show_11880842'></script>
+<script src='//libtl.com/sdk.js' data-zone='11880847' data-sdk='show_11880847'></script>
+<script src='//libtl.com/sdk.js' data-zone='11880854' data-sdk='show_11880854'></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body {
@@ -186,16 +197,16 @@ export async function onRequest(context) {
 <script>
 const REQUIRED_ADS = 5;
 const MIN_AD_WATCH_MS = 10000; // 10 seconds — enforced silently in the background
-const AD_ZONES = ['11341413', '11771716', '11771705', '11771730', '11771737'];
 
-function showAdByIndex(index) {
-  const zoneId = AD_ZONES[index];
-  const fn = window['show_' + zoneId];
-  if (typeof fn !== 'function') {
-    return Promise.reject(new Error('Ad slot not ready, try again'));
-  }
-  return fn();
-}
+// 3 rotating sets × 5 rewarded-interstitial zones.
+// Set selection is decided server-side from the user's generation count.
+const AD_ZONE_SETS = [
+  ['11341413', '11771716', '11771705', '11771730', '11771737'],
+  ['11880810', '11880813', '11880817', '11880825', '11880830'],
+  ['11880834', '11880839', '11880842', '11880847', '11880854'],
+];
+
+let AD_ZONES = [];
 
 let sessionId = null;
 let watchedCount = 0;
@@ -298,6 +309,10 @@ async function initSession() {
     if (!data.success) throw new Error(data.error || 'Could not start session');
 
     sessionId = data.sessionId;
+    AD_ZONES = Array.isArray(data.adZones) ? data.adZones.slice(0, REQUIRED_ADS) : [];
+    if (AD_ZONES.length !== REQUIRED_ADS) {
+      throw new Error('Invalid ad set');
+    }
     renderDots();
     btn.disabled = false;
     btn.textContent = 'Watch Ad (0/' + REQUIRED_ADS + ')';
